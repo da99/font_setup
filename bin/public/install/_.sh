@@ -8,7 +8,7 @@ install () {
 
   case "$NAME" in
     *.zip|*.ZIP)
-      local +x FILE="$(realpath "$1")"; shift
+      local +x FILE="$(realpath "$NAME")"
       unzip "$FILE" -d "$HOME"/.fonts
       fc-cache -fv
       ;;
