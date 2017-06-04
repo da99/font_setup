@@ -20,10 +20,34 @@ install () {
 
   case "$NAME" in
     default)
-      my_os package --install fontconfig cairo freetype google-fonts-ttf
+      my_os package --install \
+        fontconfig            \
+        cairo                 \
+        freetype              \
+        noto-fonts-ttf        \
+        liberation-fonts-ttf
+
       echo "=== Installing powerline:"
       font_setup install powerline
-      font_setup install alternatives
+
+      echo "=== Installing nerd-fonts:"
+      font_setup install nerd-fonts
+
+      echo "=== Installing fontsquirrel fonts:"
+      font_setup install fontsquirrel \
+        heuristica \
+        oswald     \
+        signika    \
+        felipa     \
+        tex-gyre-bonum \
+        tex-gyre-schola \
+        tex-gyre-pagella \
+        courier-prime
+
+      echo "=== Installing fonts from github:"
+      font_setup install https://github.com/axilleas/googlefonts gelasio
+      font_setup install https://github.com/nellielemonier/Helvetica-Neue helveticaneue
+      font_setup install https://github.com/nathanboktae/oauthdevconsole/tree/master/app/fonts weblysleek
 
       case "$(my_os name)" in
         "rolling_void")
@@ -46,10 +70,50 @@ install () {
       scripts/install-powerline
       ;;
 
+
+    nerd-fonts)
+      local +x TAG="$(lynx --dump "https://github.com/ryanoasis/nerd-fonts/releases" | grep -iP '^[\d\s\.]+http.+/nerd-fonts/releases/tag/v[\d\.]+$' | rev | cut -d'/' -f1 | rev | sort --version-sort | tail -n 1)"
+      local +x DESTDIR="$HOME/.local/share/fonts"
+      local +x COUNT="0"
+      IFS=$'\n'
+
+      local +x TMP="/tmp/my_font"
+      mkdir -p "$TMP"
+
+      for LINE in $(lynx --dump "https://github.com/ryanoasis/nerd-fonts/releases" | grep -iP '^[\d\.\s]+http.+/nerd-fonts/releases/download/'$TAG'/.+\.zip$') ; do
+        cd "$TMP"
+        local +x URL="${LINE#*.* }"
+        local +x NAME="$(basename "$URL" .zip)"
+        echo "=== Downloading $NAME:"
+        if [[ ! -e "$NAME".zip ]]; then
+          wget "$URL" --output-document="$NAME.zip"
+          unzip "$NAME.zip" -d "$NAME"
+        fi
+        cd "$NAME"
+
+        for FILE in $(find . -type f | grep -iP ".(otf|pcf|ttf)"); do
+          local +x FILE="$(basename "$FILE")"
+          if [[ ! -e "$DESTDIR/$FILE" ]]; then
+            cp -i "$FILE" "$DESTDIR"
+            COUNT=$(( COUNT + 1 ))
+          else
+            echo "=== Already installed: $FILE"
+          fi
+        done
+
+      done # for LINE in releases
+
+      if [[ $COUNT -gt 0 ]]; then
+        fc-cache -fv
+      fi
+      ;;
+
     *"github"*)
       local +x URL="$NAME"
       local +x NAME="$1"; shift
-      local +x COUNT=0
+      local +x FOUND=0
+      local +x INSTALLED=0
+      local +x DESTDIR="$HOME/.local/share/fonts"
 
       if font_setup search "$NAME" ; then
         echo "=== Already installed."
@@ -62,71 +126,62 @@ install () {
 
       IFS=$'\n'
       for LINE in $(lynx --dump "$URL" | grep -i -P '^ *\d+\. +http.+github.+'$NAME'.*(otf|pcf|ttf)$' ) ; do
+        FOUND=$((FOUND + 1))
         LINE="${LINE/\/blob\//\/raw\/}"
         LINE="${LINE#*.* }"
         local +x DOWNLOAD="$LINE"
-        wget "$DOWNLOAD"
         local +x FILE_NAME="$(basename "$DOWNLOAD")"
-        cp -i "$FILE_NAME" "$HOME/.local/share/fonts/"
-        COUNT=$((COUNT + 1))
+
+
+        if [[ ! -e "$DESTDIR"/"$FILE_NAME" ]]; then
+          if [[ ! -e "$FILE_NAME" ]]; then
+            wget "$DOWNLOAD"
+          fi
+          cp -i "$FILE_NAME" "$DESTDIR"
+          INSTALLED="$(( INSTALLED + 1 ))"
+        else
+          echo "=== Already installed: $FILE_NAME"
+        fi
       done
 
-      if [[ "$COUNT" -lt 1 ]]; then
+      if [[ "$FOUND" -lt 1 ]]; then
         echo "!!! No fonts found: $NAME" >&2
         exit 2
       fi
 
-      fc-cache -fv
+      if [[ "$INSTALLED" -gt 0 ]]; then
+        fc-cache -fv
+      fi
       ;;
 
     fontsquirrel)
-      local +x NAME="$1"; shift
-      local +x SEARCH_NAME="${NAME//-/.*}"
-      local +x URL="https://www.fontsquirrel.com/fonts/download/$NAME"
+      local +x IFS=$'\n'
+      while [[ ! -z "$@" ]]; do
+        local +x NAME="$1"; shift
+        local +x SEARCH_NAME="${NAME//-/.*}"
+        local +x URL="https://www.fontsquirrel.com/fonts/download/$NAME"
 
-      if font_setup search "$NAME" ; then
-        echo "=== Already installed."
-        exit 0
-      fi
+        if font_setup search "$NAME" ; then
+          echo "=== Already installed."
+          exit 0
+        fi
 
-      cd /tmp
-      mkdir -p my_font
-      cd my_font
-      if [[ ! -s "$NAME.zip" ]]; then
-        wget "$URL" --output-document "$NAME.zip"
-      fi
-      if [[ ! -d "$NAME" ]]; then
-        unzip "$NAME.zip" -d "$NAME"
-      fi
+        cd /tmp
+        mkdir -p my_font
+        cd my_font
+        if [[ ! -s "$NAME.zip" ]]; then
+          wget "$URL" --output-document "$NAME.zip"
+        fi
+        if [[ ! -d "$NAME" ]]; then
+          unzip "$NAME.zip" -d "$NAME"
+        fi
 
-      cd "$NAME"
-      IFS=$'\n'
-      for FILE in $(find . -type f | grep -iP ".(otf|pcf|ttf)") ; do
-        cp -i "$FILE" "$HOME/.local/share/fonts"
+        cd "$NAME"
+        for FILE in $(find . -type f | grep -iP ".(otf|pcf|ttf)") ; do
+          cp -i "$FILE" "$HOME/.local/share/fonts"
+        done
       done
       fc-cache -fv
-      font_setup list | grep --color=always -i -E "$SEARCH_NAME"
-      ;;
-
-    alternatives)
-      font_setup install fontsquirrel heuristica
-      font_setup install fontsquirrel oswald
-      font_setup install fontsquirrel signika
-      font_setup install fontsquirrel felipa
-      font_setup install fontsquirrel tex-gyre-bonum
-      font_setup install fontsquirrel tex-gyre-schola
-      font_setup install fontsquirrel tex-gyre-pagella
-      font_setup install fontsquirrel courier-prime
-
-      my_os package --install \
-        noto-fonts-ttf        \
-        liberation-fonts-ttf
-
-      font_setup install https://github.com/axilleas/googlefonts gelasio
-      font_setup install https://github.com/nellielemonier/Helvetica-Neue helveticaneue
-
-      font_setup install https://github.com/nathanboktae/oauthdevconsole/tree/master/app/fonts weblysleek
-
       ;;
 
     *.zip|*.ZIP)
