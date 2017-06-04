@@ -1,5 +1,11 @@
 
 
+Infinality-alternatives:
+===========================
+
+* https://www.reddit.com/r/archlinux/comments/5r4ce5/infinality/
+* https://gist.github.com/cryzed/e002e7057435f02cc7894b9e748c5671
+
 Note:
 ====================================
 

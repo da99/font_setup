@@ -10,14 +10,37 @@ install () {
   mkdir -p "$DESTDIR"
 
   if [[ -z "$@" ]]; then
-    local +x NAME="powerline"
+    local +x NAME="default"
   else
     local +x NAME="$1"; shift
   fi
 
-  local +x PATH="$PATH:$THIS_DIR/bin"
+  PATH="$PATH:$THIS_DIR/bin"
+  PATH="$PATH:$THIS_DIR/../my_os/bin"
+  PATH="$PATH:$THIS_DIR/../my_fs/bin"
 
   case "$NAME" in
+    default)
+      my_os package --install fontconfig cairo freetype
+      echo "=== Installing powerline:"
+      font_setup install powerline
+
+      case "$(my_os name)" in
+        "rolling_void")
+          local +x AVAIL="/usr/share/fontconfig/conf.avail"
+          local +x INSTALLED="/etc/fonts/conf.d"
+          my_fs link "$AVAIL/11-lcdfilter-default.conf" "$INSTALLED"
+          my_fs link "$AVAIL/10-sub-pixel-rgb.conf"     "$INSTALLED"
+          my_fs link "$AVAIL/10-hinting-slight.conf"    "$INSTALLED"
+          my_fs link "$THIS_DIR/config/local.conf"      "/etc/fonts"
+          ;;
+        *)
+          echo "!!! Unknown OS: $(my_os name)" >&2
+          exit 1
+          ;;
+      esac
+      ;;
+
     powerline)
       cd "$THIS_DIR"
       scripts/install-powerline
