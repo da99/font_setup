@@ -7,6 +7,7 @@ install () {
   #  NOTE: $HOME/.fonts path is deprecated:
   #        https://wiki.archlinux.org/index.php/font_configuration#Font_paths
   local +x DESTDIR="$HOME/.local/share/fonts"
+  local +x EXTS="otf|pcf|ttf|bdf"
   mkdir -p "$DESTDIR"
 
   if [[ -z "$@" ]]; then
@@ -48,6 +49,11 @@ install () {
       font_setup install https://github.com/axilleas/googlefonts gelasio
       font_setup install https://github.com/nellielemonier/Helvetica-Neue helveticaneue
       font_setup install https://github.com/nathanboktae/oauthdevconsole/tree/master/app/fonts weblysleek
+      font_setup install https://github.com/google/fonts/tree/master/ofl/raleway  raleway
+      font_setup install https://github.com/AppleDesignResources/SanFranciscoFont SanFrancisco
+
+      echo "=== Installing tecate bitmap fonts:"
+      font_setup install tecate
 
       case "$(my_os name)" in
         "rolling_void")
@@ -67,7 +73,30 @@ install () {
 
     powerline)
       cd "$THIS_DIR"
-      scripts/install-powerline
+      PATH="$PATH:$THIS_DIR/../my_git/bin"
+      cd /progs
+      if [[ -d fonts ]]; then
+        cd fonts
+        local +x CURRENT="$(my_git describe)"
+        echo -n "=== pulling: "
+        git pull
+        if [[ "$CURRENT" == "$(my_git describe)" ]]; then
+          echo "=== Already installed latest."
+        else
+          ./install.sh
+        fi
+      else
+        git clone https://github.com/powerline/fonts
+        cd fonts
+        ./install.sh
+      fi
+      ;;
+
+    tecate) # bitmap fonts
+      font_setup install https://github.com/Tecate/bitmap-fonts/tree/master/bitmap/boxxy      boxxy
+      font_setup install https://github.com/Tecate/bitmap-fonts/tree/master/bitmap/zevv-peep  zevv-peep
+      font_setup install https://github.com/Tecate/bitmap-fonts/tree/master/bitmap/ctrld-font ctrld
+      font_setup install https://github.com/Tecate/bitmap-fonts/tree/master/bitmap/knxt       knxt
       ;;
 
 
@@ -91,7 +120,7 @@ install () {
         fi
         cd "$NAME"
 
-        for FILE in $(find . -type f | grep -iP ".(otf|pcf|ttf)"); do
+        for FILE in $(find . -type f | grep -iP ".($EXTS)"); do
           local +x FILE="$(basename "$FILE")"
           if [[ ! -e "$DESTDIR/$FILE" ]]; then
             cp -i "$FILE" "$DESTDIR"
@@ -125,7 +154,7 @@ install () {
       cd "$TMP"
 
       IFS=$'\n'
-      for LINE in $(lynx --dump "$URL" | grep -i -P '^ *\d+\. +http.+github.+'$NAME'.*(otf|pcf|ttf)$' ) ; do
+      for LINE in $(lynx --dump "$URL" | grep -i -P '^ *\d+\. +http.+github.+'$NAME'.*('$EXTS')$' ) ; do
         FOUND=$((FOUND + 1))
         LINE="${LINE/\/blob\//\/raw\/}"
         LINE="${LINE#*.* }"
@@ -177,7 +206,7 @@ install () {
         fi
 
         cd "$NAME"
-        for FILE in $(find . -type f | grep -iP ".(otf|pcf|ttf)") ; do
+        for FILE in $(find . -type f | grep -iP ".($EXTS)") ; do
           cp -i "$FILE" "$HOME/.local/share/fonts"
         done
       done
@@ -188,68 +217,6 @@ install () {
       local +x FILE="$(realpath "$NAME")"
       unzip "$FILE" -d "$DESTDIR"
       fc-cache -fv
-      ;;
-
-    raleway)
-      mkdir -p /tmp/google-fonts
-      cd       /tmp/google-fonts
-
-      for FILE in $(lynx --dump https://github.com/google/fonts/tree/master/ofl/raleway  | grep -P '\]Raleway.*.ttf' | cut -d']' -f2 | cut -d'[' -f1); do
-        wget -O "$FILE" "https://github.com/google/fonts/blob/master/ofl/raleway/${FILE}?raw=true"
-      done
-      cp -f *.ttf "$DESTDIR"
-      fc-cache -fv
-      ;;
-
-    SanFrancisco|"San Francisco"*)
-      cd /tmp
-      local +x SF_FONTS="https://github.com/AppleDesignResources/SanFranciscoFont"
-      if [[ -d "SanFranciscoFont" ]]; then
-        cd SanFranciscoFont
-        git pull
-      else
-        git clone "$SF_FONTS"
-        cd SanFranciscoFont
-      fi
-
-      mkdir -p "$DESTDIR"
-      cp -f *.otf "$DESTDIR"
-      fc-cache -fv
-      ;;
-
-    tecate-bitmap-font)
-      local +x NAME="$1"; shift
-      local +x EXT="$1"; shift
-      cd /tmp
-      if [[ -d bitmap-fonts ]]; then
-        cd bitmap-fonts
-        git pull
-      else
-        git clone https://github.com/Tecate/bitmap-fonts
-        cd bitmap-fonts
-      fi
-      cp bitmap/$NAME/**/*.$EXT "$DESTDIR" -f ||
-      cp bitmap/$NAME/*.$EXT "$DESTDIR" -f
-      fc-cache -fv
-      ;;
-
-    zevv-peep)
-      font_setup install tecate-bitmap-font $NAME bdf
-      ;;
-
-    knxt)
-      echo "NOTE: $NAME font best used at size 20 medium/normal" >&2
-      font_setup install tecate-bitmap-font $NAME {bdr,pcf}
-      ;;
-
-    ctrld-font)
-      echo "NOTE: $NAME font best used at size 13 medium/normal" >&2
-      font_setup install tecate-bitmap-font $NAME bdf
-      ;;
-
-    boxxy)
-      echo "NOTE: boxxy font best used at size 14 medium/normal" >&2
-      font_setup install tecate-bitmap-font $NAME bdf
       ;;
 
     *)
