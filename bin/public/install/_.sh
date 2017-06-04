@@ -15,13 +15,12 @@ install () {
     local +x NAME="$1"; shift
   fi
 
-  PATH="$PATH:$THIS_DIR/bin"
   PATH="$PATH:$THIS_DIR/../my_os/bin"
   PATH="$PATH:$THIS_DIR/../my_fs/bin"
 
   case "$NAME" in
     default)
-      my_os package --install fontconfig cairo freetype
+      my_os package --install fontconfig cairo freetype google-fonts-ttf
       echo "=== Installing powerline:"
       font_setup install powerline
 
@@ -44,6 +43,55 @@ install () {
     powerline)
       cd "$THIS_DIR"
       scripts/install-powerline
+      ;;
+
+    fontsquirrel)
+      local +x NAME="$1"; shift
+      local +x SEARCH_NAME="${NAME//-/.*}"
+      local +x URL="https://www.fontsquirrel.com/fonts/download/$NAME"
+
+      if font_setup search "$NAME" ; then
+        echo "=== Already installed."
+        exit 0
+      fi
+
+      cd /tmp
+      mkdir -p my_font
+      cd my_font
+      if [[ ! -s "$NAME.zip" ]]; then
+        wget "$URL" --output-document "$NAME.zip"
+      fi
+      if [[ ! -d "$NAME" ]]; then
+        unzip "$NAME.zip" -d "$NAME"
+      fi
+
+      cd "$NAME"
+      IFS=$'\n'
+      for FILE in $(find . -type f | grep -iP ".(otf|pcf|ttf)") ; do
+        cp -i "$FILE" "$HOME/.local/share/fonts"
+      done
+      fc-cache -fv
+      font_setup list | grep --color=always -i -E "$SEARCH_NAME"
+      ;;
+
+    alternatives)
+      font_setup install fontsquirrel heuristica
+      font_setup install fontsquirrel oswald
+      font_setup install fontsquirrel signika
+      font_setup install fontsquirrel felipa
+      font_setup install fontsquirrel tex-gyre-bonum
+      font_setup install fontsquirrel tex-gyre-schola
+      font_setup install fontsquirrel tex-gyre-pagella
+      font_setup install fontsquirrel courier-prime
+
+      # scripts/download "noto             noto-fonts-ttf"
+      # scripts/download "liberation       liberation-fonts-ttf"
+
+      # scripts/download "gelasio*.ttf     https://github.com/axilleas/googlefonts"
+      # scripts/download "helvetica-*.tff  https://github.com/adampash/Lifehacker.me/tree/master/fonts"
+      # scripts/download "helvetica-*.tff  https://github.com/nellielemonier/Helvetica-Neue"
+      # scripts/download "weblysleek*.ttf  https://github.com/nathanboktae/oauthdevconsole/tree/master/app/fonts"
+
       ;;
 
     *.zip|*.ZIP)

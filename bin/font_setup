@@ -1,8 +1,10 @@
 #!/usr/bin/env mksh
 #
 #
-THE_ARGS="$@"
-THIS_DIR="$(dirname "$(dirname "$0")")"
+set -u -e -o pipefail
+local +x THE_ARGS="$@"
+local +x THIS_DIR="$(dirname "$(dirname "$0")")"
+PATH="$PATH:$THIS_DIR/bin"
 
 if [[ -z "$@" ]]; then
   action="watch"
@@ -11,7 +13,6 @@ else
   shift
 fi
 
-set -u -e -o pipefail
 
 case $action in
   help|--help|-h)
