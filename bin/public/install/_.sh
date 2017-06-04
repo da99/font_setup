@@ -23,6 +23,7 @@ install () {
       my_os package --install fontconfig cairo freetype google-fonts-ttf
       echo "=== Installing powerline:"
       font_setup install powerline
+      font_setup install alternatives
 
       case "$(my_os name)" in
         "rolling_void")
@@ -43,6 +44,39 @@ install () {
     powerline)
       cd "$THIS_DIR"
       scripts/install-powerline
+      ;;
+
+    *"github"*)
+      local +x URL="$NAME"
+      local +x NAME="$1"; shift
+      local +x COUNT=0
+
+      if font_setup search "$NAME" ; then
+        echo "=== Already installed."
+        exit 0
+      fi
+
+      local +x TMP="/tmp/my_font/$NAME"
+      mkdir -p "$TMP"
+      cd "$TMP"
+
+      IFS=$'\n'
+      for LINE in $(lynx --dump "$URL" | grep -i -P '^ *\d+\. +http.+github.+'$NAME'.*(otf|pcf|ttf)$' ) ; do
+        LINE="${LINE/\/blob\//\/raw\/}"
+        LINE="${LINE#*.* }"
+        local +x DOWNLOAD="$LINE"
+        wget "$DOWNLOAD"
+        local +x FILE_NAME="$(basename "$DOWNLOAD")"
+        cp -i "$FILE_NAME" "$HOME/.local/share/fonts/"
+        COUNT=$((COUNT + 1))
+      done
+
+      if [[ "$COUNT" -lt 1 ]]; then
+        echo "!!! No fonts found: $NAME" >&2
+        exit 2
+      fi
+
+      fc-cache -fv
       ;;
 
     fontsquirrel)
@@ -84,13 +118,14 @@ install () {
       font_setup install fontsquirrel tex-gyre-pagella
       font_setup install fontsquirrel courier-prime
 
-      # scripts/download "noto             noto-fonts-ttf"
-      # scripts/download "liberation       liberation-fonts-ttf"
+      my_os package --install \
+        noto-fonts-ttf        \
+        liberation-fonts-ttf
 
-      # scripts/download "gelasio*.ttf     https://github.com/axilleas/googlefonts"
-      # scripts/download "helvetica-*.tff  https://github.com/adampash/Lifehacker.me/tree/master/fonts"
-      # scripts/download "helvetica-*.tff  https://github.com/nellielemonier/Helvetica-Neue"
-      # scripts/download "weblysleek*.ttf  https://github.com/nathanboktae/oauthdevconsole/tree/master/app/fonts"
+      font_setup install https://github.com/axilleas/googlefonts gelasio
+      font_setup install https://github.com/nellielemonier/Helvetica-Neue helveticaneue
+
+      font_setup install https://github.com/nathanboktae/oauthdevconsole/tree/master/app/fonts weblysleek
 
       ;;
 
