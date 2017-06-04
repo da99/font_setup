@@ -1,13 +1,23 @@
 
-# === {{CMD}}  --all
-# === {{CMD}}  --list
+# === {{CMD}}        # Currently, defaults to powerline
 # === {{CMD}}  siji
 # === {{CMD}}  font.zip
+# === {{CMD}}  powerline
 install () {
-  local +x NAME="$1"; shift
+  if [[ -z "$@" ]]; then
+    local +x NAME="powerline"
+  else
+    local +x NAME="$1"; shift
+  fi
+
   local +x PATH="$PATH:$THIS_DIR/bin"
 
   case "$NAME" in
+    powerline)
+      cd "$THIS_DIR"
+      scripts/install-powerline
+      ;;
+
     *.zip|*.ZIP)
       local +x FILE="$(realpath "$NAME")"
       unzip "$FILE" -d "$HOME"/.fonts
@@ -74,14 +84,6 @@ install () {
     boxxy)
       echo "NOTE: boxxy font best used at size 14 medium/normal" >&2
       font_setup install tecate-bitmap-font $NAME bdf
-      ;;
-
-    --all)
-      source "$THIS_DIR"/bin/public/list/_.sh
-      local +x IFS=$'\n'
-      for NAME in $(list); do
-        install "$NAME"
-      done
       ;;
 
     *)
