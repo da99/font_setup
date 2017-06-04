@@ -4,6 +4,11 @@
 # === {{CMD}}  font.zip
 # === {{CMD}}  powerline
 install () {
+  #  NOTE: $HOME/.fonts path is deprecated:
+  #        https://wiki.archlinux.org/index.php/font_configuration#Font_paths
+  local +x DESTDIR="$HOME/.local/share/fonts"
+  mkdir -p "$DESTDIR"
+
   if [[ -z "$@" ]]; then
     local +x NAME="powerline"
   else
@@ -20,7 +25,7 @@ install () {
 
     *.zip|*.ZIP)
       local +x FILE="$(realpath "$NAME")"
-      unzip "$FILE" -d "$HOME"/.fonts
+      unzip "$FILE" -d "$DESTDIR"
       fc-cache -fv
       ;;
 
@@ -31,7 +36,7 @@ install () {
       for FILE in $(lynx --dump https://github.com/google/fonts/tree/master/ofl/raleway  | grep -P '\]Raleway.*.ttf' | cut -d']' -f2 | cut -d'[' -f1); do
         wget -O "$FILE" "https://github.com/google/fonts/blob/master/ofl/raleway/${FILE}?raw=true"
       done
-      cp -f *.ttf $HOME/.fonts
+      cp -f *.ttf "$DESTDIR"
       fc-cache -fv
       ;;
 
@@ -46,8 +51,8 @@ install () {
         cd SanFranciscoFont
       fi
 
-      mkdir -p "$HOME/.fonts"
-      cp -f *.otf "$HOME/.fonts"
+      mkdir -p "$DESTDIR"
+      cp -f *.otf "$DESTDIR"
       fc-cache -fv
       ;;
 
@@ -62,8 +67,8 @@ install () {
         git clone https://github.com/Tecate/bitmap-fonts
         cd bitmap-fonts
       fi
-      cp bitmap/$NAME/**/*.$EXT "$HOME"/.fonts -f ||
-      cp bitmap/$NAME/*.$EXT "$HOME"/.fonts -f
+      cp bitmap/$NAME/**/*.$EXT "$DESTDIR" -f ||
+      cp bitmap/$NAME/*.$EXT "$DESTDIR" -f
       fc-cache -fv
       ;;
 
@@ -91,7 +96,7 @@ install () {
         local +x DIR="$NAME"
         local +x IFS=$'\n'
         cd "$DIR"
-        unzip '*.zip' -d "$HOME"/.fonts
+        unzip '*.zip' -d "$DESTDIR"
         fc-cache -fv
         exit 0
       fi
