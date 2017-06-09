@@ -22,6 +22,7 @@ install () {
   case "$NAME" in
     default)
       my_os package --install \
+        lynx                  \
         fontconfig            \
         cairo                 \
         freetype              \
@@ -46,11 +47,11 @@ install () {
         courier-prime
 
       echo "=== Installing fonts from github:"
-      font_setup install https://github.com/axilleas/googlefonts gelasio
-      font_setup install https://github.com/nellielemonier/Helvetica-Neue helveticaneue
-      font_setup install https://github.com/nathanboktae/oauthdevconsole/tree/master/app/fonts weblysleek
-      font_setup install https://github.com/google/fonts/tree/master/ofl/raleway  raleway
-      font_setup install https://github.com/AppleDesignResources/SanFranciscoFont SanFrancisco
+      font_setup install gelasio
+      font_setup install helveticaneue
+      font_setup install weblysleek
+      font_setup install raleway
+      font_setup install SanFrancisco
 
       echo "=== Installing tecate bitmap fonts:"
       font_setup install tecate
@@ -69,6 +70,26 @@ install () {
           exit 1
           ;;
       esac
+      ;;
+
+    gelasio)
+      font_setup install https://github.com/axilleas/googlefonts gelasio
+      ;;
+
+    helveticaneue)
+      font_setup install https://github.com/nellielemonier/Helvetica-Neue helveticaneue
+      ;;
+
+    weblysleek)
+      font_setup install https://github.com/nathanboktae/oauthdevconsole/tree/master/app/fonts weblysleek
+      ;;
+
+    raleway)
+      font_setup install https://github.com/google/fonts/tree/master/ofl/raleway  raleway
+      ;;
+
+    SanFrancisco)
+      font_setup install https://github.com/AppleDesignResources/SanFranciscoFont SanFrancisco
       ;;
 
     powerline)
@@ -113,8 +134,12 @@ install () {
         cd "$TMP"
         local +x URL="${LINE#*.* }"
         local +x NAME="$(basename "$URL" .zip)"
+        if font_setup search "$NAME" ; then
+          echo "=== Already installed: $NAME"
+          continue
+        fi
         echo "=== Downloading $NAME:"
-        if [[ ! -e "$NAME".zip ]]; then
+        if [[ ! -s "$NAME".zip ]]; then
           wget "$URL" --output-document="$NAME.zip"
           unzip "$NAME.zip" -d "$NAME"
         fi
