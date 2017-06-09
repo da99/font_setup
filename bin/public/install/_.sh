@@ -138,8 +138,9 @@ install () {
           echo "=== Already installed: $NAME"
           continue
         fi
-        echo "=== Downloading $NAME:"
+
         if [[ ! -s "$NAME".zip ]]; then
+          echo "=== Downloading $NAME:"
           wget "$URL" --output-document="$NAME.zip"
           unzip "$NAME.zip" -d "$NAME"
         fi
